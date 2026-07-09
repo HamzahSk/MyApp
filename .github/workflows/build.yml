@@ -36,6 +36,20 @@ jobs:
           npx cap add android
           npx cap sync android
 
+      # --- INI TAMBAHAN BARUNYA ---
+      # Menulis kode otomatis ke dalam Gradle untuk membuang file Kotlin lama
+      - name: Fix Error Duplicate Kotlin
+        run: |
+          cat <<EOF >> android/app/build.gradle
+          
+          configurations.all {
+              resolutionStrategy {
+                  exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
+                  exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+              }
+          }
+          EOF
+
       - name: Build File APK
         run: |
           cd android

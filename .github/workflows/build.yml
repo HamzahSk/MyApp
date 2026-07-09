@@ -17,15 +17,14 @@ jobs:
       - name: Siapkan Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
-      - name: Siapkan Java JDK
+      - name: Siapkan Java JDK 21
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '17'
+          distribution: 'temurin'
+          java-version: '21'
 
-      # Tambahan baru: Menyiapkan cache Gradle agar tidak mudah gagal download
       - name: Siapkan Gradle
         uses: gradle/actions/setup-gradle@v3
 
@@ -41,7 +40,6 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          # Tambahan baru: --no-daemon agar lebih stabil di server GitHub
           ./gradlew assembleDebug --no-daemon
 
       - name: Upload Hasil APK

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Kontakku</title>
+    
+    <style>
+        /* Sedikit CSS agar tampilannya rapi */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            padding: 20px;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .profile-pic {
+            width: 100px;
+            height: 100px;
+            background-color: #ddd;
+            border-radius: 50%;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+        }
+
+        h2 {
+            margin: 0 0 5px;
+            color: #333;
+        }
+
+        p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .contact-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .contact-list li {
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            display: inline-block;
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: white;
+            font-weight: bold;
+            box-sizing: border-box;
+            border: none;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .btn-wa { background-color: #25D366; }
+        .btn-email { background-color: #EA4335; }
+        .btn-test { background-color: #007BFF; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <div class="profile-pic">👤</div>
+        
+        <h2>Nama Kamu</h2>
+        <p>Developer Aplikasi</p>
+
+        <ul class="contact-list">
+            <li>
+                <a href="https://wa.me/6281234567890" class="btn btn-wa" target="_blank">
+                    💬 Chat WhatsApp
+                </a>
+            </li>
+            <li>
+                <a href="mailto:emailkamu@gmail.com" class="btn btn-email">
+                    ✉️ Kirim Email
+                </a>
+            </li>
+            <li>
+                <button class="btn btn-test" onclick="testAplikasi()">
+                    🚀 Test Tombol JS
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <script>
+        function testAplikasi() {
+            alert("Mantap! JavaScript berjalan lancar di aplikasi ini.");
+        }
+    </script>
+
+</body>
+</html>

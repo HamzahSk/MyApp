@@ -1,0 +1,54 @@
+name: Build Android APK Otomatis
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ambil Kode dari Repository
+        uses: actions/checkout@v3
+
+      - name: Siapkan Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Siapkan Java JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Inisialisasi Project & Capacitor
+        run: |
+          # Bikin project Node sederhana
+          npm init -y
+          
+          # Install Capacitor
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          
+          # Inisialisasi aplikasi (Arahkan ke folder 'www' tempat HTML kamu berada)
+          npx cap init "Aplikasi Kontak" com.aplikasi.kontak --web-dir www
+          
+          # Tambahkan platform Android dan sinkronisasi file
+          npx cap add android
+          npx cap sync android
+
+      - name: Build File APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload Hasil APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: aplikasi-kontakku
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          

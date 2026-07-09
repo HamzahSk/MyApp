@@ -25,18 +25,15 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
+      # Tambahan baru: Menyiapkan cache Gradle agar tidak mudah gagal download
+      - name: Siapkan Gradle
+        uses: gradle/actions/setup-gradle@v3
+
       - name: Inisialisasi Project & Capacitor
         run: |
-          # Bikin project Node sederhana
           npm init -y
-          
-          # Install Capacitor
           npm install @capacitor/core @capacitor/cli @capacitor/android
-          
-          # Inisialisasi aplikasi (Arahkan ke folder 'www' tempat HTML kamu berada)
           npx cap init "Aplikasi Kontak" com.aplikasi.kontak --web-dir www
-          
-          # Tambahkan platform Android dan sinkronisasi file
           npx cap add android
           npx cap sync android
 
@@ -44,7 +41,8 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          # Tambahan baru: --no-daemon agar lebih stabil di server GitHub
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload Hasil APK
         uses: actions/upload-artifact@v4

@@ -1,692 +1,269 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Headless Browser Simulator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scraping Browser Pro</title>
     <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --primary-color: #bb86fc;
+            --text-color: #e0e0e0;
+            --border-color: #333333;
+        }
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background: #0f0f1a;
-            color: #fff;
-            padding: 20px;
-            min-height: 100vh;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
         }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
+        /* --- Address Bar --- */
+        .navbar {
+            background-color: var(--surface-color);
+            padding: 10px;
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--border-color);
+            align-items: center;
         }
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .header h1 {
-            font-size: 24px;
-        }
-        .header p {
-            opacity: 0.8;
-            font-size: 14px;
-        }
-        .card {
-            background: #1a1a2e;
-            border-radius: 12px;
-            padding: 20px;
-            margin: 10px 0;
-            border: 1px solid #2a2a4a;
-        }
-        .card h3 {
-            color: #a78bfa;
-            margin-bottom: 10px;
-        }
-        button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        .navbar button {
+            background: none;
             border: none;
-            padding: 12px 20px;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
+            color: var(--primary-color);
+            font-size: 20px;
             cursor: pointer;
+            padding: 5px;
+        }
+        .url-input-container {
+            flex-grow: 1;
+            display: flex;
+            background: var(--bg-color);
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+            padding: 5px 15px;
+        }
+        .url-input-container input {
             width: 100%;
-            margin: 5px 0;
-            transition: all 0.3s;
+            background: transparent;
+            border: none;
+            color: white;
+            outline: none;
+            font-size: 14px;
         }
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+        /* --- Viewport (Browser Area) --- */
+        .viewport {
+            flex-grow: 1;
+            position: relative;
+            background: #ffffff;
         }
-        button.secondary {
-            background: #2a2a4a;
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
         }
-        button.secondary:hover {
-            background: #3a3a5a;
+        .overlay-loader {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(18, 18, 18, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            color: var(--primary-color);
+            font-weight: bold;
         }
-        .log {
-            background: #0a0a15;
-            border-radius: 8px;
-            padding: 15px;
-            font-family: 'Courier New', monospace;
+        /* --- Console/Tools Bottom Sheet --- */
+        .tools-panel {
+            background-color: var(--surface-color);
+            border-top: 1px solid var(--border-color);
+            height: 250px;
+            display: flex;
+            flex-direction: column;
+        }
+        .tools-header {
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
             font-size: 12px;
-            max-height: 300px;
-            overflow-y: auto;
-            margin: 10px 0;
-            border: 1px solid #1a1a3a;
+            color: #888;
         }
-        .log .success { color: #34d399; }
-        .log .error { color: #f87171; }
-        .log .info { color: #60a5fa; }
-        .log .warn { color: #fbbf24; }
-        .log-line {
-            padding: 3px 0;
-            border-bottom: 1px solid #1a1a2a;
-        }
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin: 10px 0;
-        }
-        .stat-item {
-            background: #1a1a2e;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-            border: 1px solid #2a2a4a;
-        }
-        .stat-item .number {
-            font-size: 24px;
-            font-weight: 700;
-            color: #a78bfa;
-        }
-        .stat-item .label {
-            font-size: 11px;
-            color: #666;
-            margin-top: 5px;
-        }
-        .status-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-        .status-indicator.running { background: #34d399; animation: pulse 1s infinite; }
-        .status-indicator.idle { background: #6b7280; }
-        .status-indicator.error { background: #f87171; }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-        .flex {
+        .action-buttons {
             display: flex;
             gap: 10px;
+            padding: 10px;
+            overflow-x: auto;
         }
-        .flex button {
-            flex: 1;
+        .action-buttons button {
+            background: var(--primary-color);
+            color: #000;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-weight: bold;
+            white-space: nowrap;
+            cursor: pointer;
         }
-        input {
-            width: 100%;
-            padding: 12px;
-            background: #1a1a2e;
-            border: 1px solid #2a2a4a;
-            border-radius: 8px;
-            color: white;
-            font-size: 14px;
-            margin: 5px 0;
+        .console-log {
+            flex-grow: 1;
+            padding: 10px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 11px;
+            background: #000;
         }
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0a0a15;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #2a2a4a;
-            border-radius: 3px;
-        }
+        .log-entry { margin-bottom: 4px; border-bottom: 1px dashed #333; padding-bottom: 2px; }
+        .log-success { color: #03dac6; }
+        .log-error { color: #cf6679; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <div class="header">
-            <h1>🕷️ Headless Browser Simulator</h1>
-            <p>Jalankan JavaScript seperti browser beneran di WebView</p>
-            <div style="margin-top:10px;">
-                <span class="status-indicator running" id="statusIndicator"></span>
-                <span id="statusText" style="font-size:12px;opacity:0.8;">Ready</span>
-            </div>
+    <div class="navbar">
+        <button onclick="goBack()">◀</button>
+        <div class="url-input-container">
+            <input type="url" id="urlInput" placeholder="Ketik URL (contoh: https://quotes.toscrape.com)" value="https://quotes.toscrape.com">
         </div>
+        <button onclick="loadUrl()">GO</button>
+    </div>
 
-        <!-- Stats -->
-        <div class="stats">
-            <div class="stat-item">
-                <div class="number" id="pageCount">0</div>
-                <div class="label">Pages Loaded</div>
-            </div>
-            <div class="stat-item">
-                <div class="number" id="jsCount">0</div>
-                <div class="label">JS Executed</div>
-            </div>
-            <div class="stat-item">
-                <div class="number" id="dataCount">0</div>
-                <div class="label">Data Fetched</div>
-            </div>
+    <div class="viewport">
+        <iframe id="browserFrame" sandbox="allow-same-origin allow-scripts allow-forms"></iframe>
+        <div class="overlay-loader" id="loader">Memuat Halaman...</div>
+    </div>
+
+    <div class="tools-panel">
+        <div class="tools-header">
+            <span>🛠️ Scraping Tools</span>
+            <span id="status">Status: Idle</span>
         </div>
-
-        <!-- Controls -->
-        <div class="card">
-            <h3>🎮 Kontrol Browser</h3>
-            <div class="flex">
-                <button onclick="navigateTo()">🌐 Navigasi</button>
-                <button onclick="executeJS()">⚡ Execute JS</button>
-            </div>
-            <input type="text" id="urlInput" placeholder="https://example.com" value="https://example.com">
-            <input type="text" id="jsInput" placeholder="document.title" value="document.title">
+        <div class="action-buttons">
+            <button onclick="scrapeNative()">🌐 Scrape Native (Bypass CORS)</button>
+            <button onclick="getCookies()">🍪 Cek Cookies</button>
+            <button onclick="clearConsole()">🗑️ Clear</button>
         </div>
-
-        <!-- Actions -->
-        <div class="card">
-            <h3>🚀 Quick Actions</h3>
-            <button onclick="scrapePage()">📄 Scrape Current Page</button>
-            <button onclick="getAllLinks()">🔗 Get All Links</button>
-            <button onclick="screenshotPage()">📸 Screenshot (Base64)</button>
-            <button onclick="injectScript()">💉 Inject Script</button>
-            <button onclick="clearLog()" class="secondary">🗑️ Clear Log</button>
-        </div>
-
-        <!-- Result / Log -->
-        <div class="card">
-            <h3>📋 Console Output</h3>
-            <div class="log" id="logOutput">
-                <div class="log-line info">🟢 Browser simulator ready...</div>
-                <div class="log-line info">💡 Gunakan tombol di atas untuk menjalankan aksi</div>
-            </div>
+        <div class="console-log" id="consoleLog">
+            <div class="log-entry log-success">Ready: UI Browser dimuat.</div>
         </div>
     </div>
 
     <script>
-        // ============================================================
-        // SIMULASI HEADLESS BROWSER DI WEBVIEW
-        // ============================================================
-        
-        // State
-        const state = {
-            currentUrl: '',
-            pageData: null,
-            jsHistory: [],
-            pageHistory: [],
-            stats: {
-                pages: 0,
-                jsExecuted: 0,
-                dataFetched: 0
-            }
-        };
+        const browserFrame = document.getElementById('browserFrame');
+        const urlInput = document.getElementById('urlInput');
+        const loader = document.getElementById('loader');
+        const consoleLog = document.getElementById('consoleLog');
+        const statusEl = document.getElementById('status');
 
-        // DOM references
-        const logOutput = document.getElementById('logOutput');
-        const statusText = document.getElementById('statusText');
-        const statusIndicator = document.getElementById('statusIndicator');
-
-        // ============================================================
-        // 1. NAVIGATE TO URL (Seperti browser beneran)
-        // ============================================================
-        async function navigateTo() {
-            const url = document.getElementById('urlInput').value.trim();
-            if (!url) {
-                addLog('warn', '⚠️ Masukkan URL dulu!');
-                return;
-            }
-
-            setStatus('running', `🌐 Loading ${url}...`);
-            addLog('info', `🌐 Navigasi ke: ${url}`);
-
-            try {
-                // Gunakan proxy CORS untuk fetch
-                const proxy = 'https://api.allorigins.win/raw?url=';
-                const response = await fetch(proxy + encodeURIComponent(url));
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const html = await response.text();
-                
-                // Simpan state
-                state.currentUrl = url;
-                state.pageData = html;
-                state.pageHistory.push(url);
-                state.stats.pages++;
-                updateStats();
-
-                // Parse dengan DOMParser
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                
-                // Ambil informasi penting
-                const title = doc.querySelector('title')?.textContent || 'No title';
-                const metaDesc = doc.querySelector('meta[name="description"]')?.content || 'No description';
-                const links = doc.querySelectorAll('a').length;
-                const images = doc.querySelectorAll('img').length;
-                const scripts = doc.querySelectorAll('script').length;
-
-                addLog('success', `✅ Loaded: ${title}`);
-                addLog('info', `📊 ${links} links, ${images} images, ${scripts} scripts`);
-                
-                // Tampilkan preview
-                showData({
-                    url: url,
-                    title: title,
-                    description: metaDesc,
-                    links: links,
-                    images: images,
-                    scripts: scripts,
-                    htmlSize: html.length
-                });
-
-                setStatus('idle', `✅ ${title}`);
-
-                // Simpan ke history (bisa diakses Android)
-                window.lastPageData = {
-                    url: url,
-                    title: title,
-                    html: html,
-                    timestamp: new Date().toISOString()
-                };
-
-                // Kirim ke Android via JavaScript Interface
-                if (window.AndroidBridge) {
-                    window.AndroidBridge.onPageLoaded(url, title, html.length);
-                }
-
-            } catch (error) {
-                addLog('error', `❌ Error: ${error.message}`);
-                setStatus('error', '❌ Failed to load');
-            }
-        }
-
-        // ============================================================
-        // 2. EXECUTE JAVASCRIPT (Seperti evaluateJavascript)
-        // ============================================================
-        function executeJS() {
-            const jsCode = document.getElementById('jsInput').value.trim();
-            if (!jsCode) {
-                addLog('warn', '⚠️ Masukkan kode JavaScript!');
-                return;
-            }
-
-            addLog('info', `⚡ Executing: ${jsCode}`);
-            setStatus('running', '⚡ Running JavaScript...');
-
-            try {
-                // Eksekusi JavaScript di context halaman
-                // Ini sama seperti evaluateJavascript di Android WebView!
-                const result = eval(jsCode);
-                
-                state.stats.jsExecuted++;
-                updateStats();
-
-                let resultStr = typeof result === 'object' 
-                    ? JSON.stringify(result, null, 2) 
-                    : String(result);
-                
-                addLog('success', `✅ Result: ${resultStr}`);
-                showData({ 
-                    code: jsCode, 
-                    result: result,
-                    type: typeof result 
-                });
-
-                setStatus('idle', '✅ JavaScript executed');
-
-                // Kirim hasil ke Android
-                if (window.AndroidBridge) {
-                    window.AndroidBridge.onJSExecuted(jsCode, resultStr);
-                }
-
-                return result;
-
-            } catch (error) {
-                addLog('error', `❌ JS Error: ${error.message}`);
-                setStatus('error', '❌ JS Error');
-            }
-        }
-
-        // ============================================================
-        // 3. SCRAPE CURRENT PAGE
-        // ============================================================
-        function scrapePage() {
-            if (!state.pageData) {
-                addLog('warn', '⚠️ Belum ada halaman yang diload!');
-                return;
-            }
-
-            addLog('info', '📄 Scraping current page...');
-            setStatus('running', '📄 Scraping...');
-
-            try {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(state.pageData, 'text/html');
-
-                // Scrape semua data
-                const data = {
-                    title: doc.querySelector('title')?.textContent || '',
-                    meta: {},
-                    headings: {
-                        h1: [...doc.querySelectorAll('h1')].map(el => el.textContent),
-                        h2: [...doc.querySelectorAll('h2')].map(el => el.textContent),
-                        h3: [...doc.querySelectorAll('h3')].map(el => el.textContent)
-                    },
-                    links: [...doc.querySelectorAll('a')].map(el => ({
-                        text: el.textContent.trim(),
-                        href: el.href
-                    })),
-                    images: [...doc.querySelectorAll('img')].map(el => ({
-                        alt: el.alt,
-                        src: el.src
-                    })),
-                    paragraphs: [...doc.querySelectorAll('p')].map(el => el.textContent),
-                    scripts: doc.querySelectorAll('script').length,
-                    styles: doc.querySelectorAll('style').length,
-                    forms: doc.querySelectorAll('form').length
-                };
-
-                // Ambil meta tags
-                doc.querySelectorAll('meta').forEach(el => {
-                    const name = el.getAttribute('name') || el.getAttribute('property');
-                    if (name) data.meta[name] = el.getAttribute('content');
-                });
-
-                state.stats.dataFetched++;
-                updateStats();
-
-                addLog('success', `✅ Scraped ${data.links.length} links, ${data.images.length} images`);
-                showData(data);
-
-                setStatus('idle', '✅ Scraping complete');
-
-                // Kirim ke Android
-                if (window.AndroidBridge) {
-                    window.AndroidBridge.onScraped(JSON.stringify(data));
-                }
-
-                return data;
-
-            } catch (error) {
-                addLog('error', `❌ Scrape error: ${error.message}`);
-                setStatus('error', '❌ Scrape failed');
-            }
-        }
-
-        // ============================================================
-        // 4. GET ALL LINKS
-        // ============================================================
-        function getAllLinks() {
-            if (!state.pageData) {
-                addLog('warn', '⚠️ Load halaman dulu!');
-                return;
-            }
-
-            try {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(state.pageData, 'text/html');
-                const links = [...doc.querySelectorAll('a')].map(el => ({
-                    text: el.textContent.trim() || '[no text]',
-                    href: el.href || '#',
-                    target: el.target || '_self'
-                }));
-
-                addLog('info', `🔗 Found ${links.length} links`);
-                showData({ 
-                    total: links.length,
-                    links: links.slice(0, 20) // Show first 20
-                });
-
-                // Kirim ke Android
-                if (window.AndroidBridge) {
-                    window.AndroidBridge.onLinksFound(JSON.stringify(links));
-                }
-
-                return links;
-
-            } catch (error) {
-                addLog('error', `❌ Error: ${error.message}`);
-            }
-        }
-
-        // ============================================================
-        // 5. SCREENSHOT (Base64)
-        // ============================================================
-        function screenshotPage() {
-            addLog('info', '📸 Taking screenshot...');
-            
-            try {
-                // Di WebView, ini bisa pakai html2canvas
-                // Tapi di browser biasa, kita simulasi
-                const canvas = document.createElement('canvas');
-                canvas.width = 800;
-                canvas.height = 600;
-                const ctx = canvas.getContext('2d');
-                
-                // Gambar mock screenshot
-                const gradient = ctx.createLinearGradient(0, 0, 800, 600);
-                gradient.addColorStop(0, '#667eea');
-                gradient.addColorStop(1, '#764ba2');
-                ctx.fillStyle = gradient;
-                ctx.fillRect(0, 0, 800, 600);
-                
-                ctx.fillStyle = 'white';
-                ctx.font = '20px Arial';
-                ctx.fillText('📸 Screenshot', 50, 100);
-                ctx.font = '14px Arial';
-                ctx.fillText(`URL: ${state.currentUrl || 'No URL'}`, 50, 140);
-                ctx.fillText(`Time: ${new Date().toLocaleString()}`, 50, 170);
-                
-                // Simulasi konten
-                ctx.fillStyle = 'rgba(255,255,255,0.1)';
-                for (let i = 0; i < 10; i++) {
-                    ctx.fillRect(50 + i*70, 200, 60, 80);
-                }
-                
-                const base64 = canvas.toDataURL('image/png');
-                
-                addLog('success', '✅ Screenshot taken (simulated)');
-                showData({ 
-                    screenshot: base64.substring(0, 100) + '...',
-                    size: base64.length
-                });
-
-                // Kirim ke Android
-                if (window.AndroidBridge) {
-                    window.AndroidBridge.onScreenshot(base64);
-                }
-
-                // Tampilkan preview
-                const img = document.createElement('img');
-                img.src = base64;
-                img.style.maxWidth = '100%';
-                img.style.borderRadius = '8px';
-                img.style.marginTop = '10px';
-                
-                const resultDiv = document.querySelector('.card:last-child');
-                resultDiv.appendChild(img);
-
-            } catch (error) {
-                addLog('error', `❌ Screenshot error: ${error.message}`);
-            }
-        }
-
-        // ============================================================
-        // 6. INJECT SCRIPT
-        // ============================================================
-        function injectScript() {
-            addLog('info', '💉 Injecting script...');
-            
-            try {
-                // Inject script ke halaman (simulasi)
-                const script = `
-                    (function() {
-                        console.log('Injected script running...');
-                        document.body.style.border = '3px solid #667eea';
-                        document.body.style.backgroundColor = '#f0f0ff';
-                        
-                        // Tambahkan watermark
-                        const div = document.createElement('div');
-                        div.style.cssText = 'position:fixed;bottom:10px;right:10px;background:#667eea;color:white;padding:10px;border-radius:8px;font-size:12px;z-index:9999;';
-                        div.textContent = '🕷️ Injected via WebView';
-                        document.body.appendChild(div);
-                        
-                        return 'Script injected successfully!';
-                    })();
-                `;
-
-                const result = eval(script);
-                addLog('success', `✅ ${result}`);
-                
-                setStatus('idle', '✅ Script injected');
-
-                // Kirim ke Android
-                if (window.AndroidBridge) {
-                    window.AndroidBridge.onScriptInjected(result);
-                }
-
-            } catch (error) {
-                addLog('error', `❌ Inject error: ${error.message}`);
-            }
-        }
-
-        // ============================================================
-        // 7. UTILITY FUNCTIONS
-        // ============================================================
-        
-        function addLog(type, message) {
-            const colors = {
-                success: 'success',
-                error: 'error',
-                info: 'info',
-                warn: 'warn'
-            };
-            
-            const line = document.createElement('div');
-            line.className = `log-line ${colors[type] || 'info'}`;
-            line.textContent = message;
-            logOutput.appendChild(line);
-            logOutput.scrollTop = logOutput.scrollHeight;
-        }
-
-        function showData(data) {
-            const resultCard = document.querySelector('.card:last-child');
-            const oldData = resultCard.querySelector('.data-display');
-            if (oldData) oldData.remove();
-
+        function log(msg, type = 'normal') {
             const div = document.createElement('div');
-            div.className = 'data-display';
-            div.style.cssText = `
-                background: #0a0a15;
-                border-radius: 8px;
-                padding: 15px;
-                margin: 10px 0;
-                max-height: 200px;
-                overflow-y: auto;
-                font-family: 'Courier New', monospace;
-                font-size: 12px;
-                border: 1px solid #1a1a3a;
-            `;
+            div.className = `log-entry ${type === 'success' ? 'log-success' : type === 'error' ? 'log-error' : ''}`;
+            div.textContent = `> ${msg}`;
+            consoleLog.appendChild(div);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+        function clearConsole() {
+            consoleLog.innerHTML = '<div class="log-entry">Console dibersihkan.</div>';
+        }
+
+        // --- Fitur 1: Visual Browser (Iframe) ---
+        function loadUrl() {
+            let url = urlInput.value.trim();
+            if (!url.startsWith('http')) url = 'https://' + url;
             
-            const json = JSON.stringify(data, null, 2);
-            div.textContent = json;
-            resultCard.appendChild(div);
+            log(`Mencoba memuat visual: ${url}`);
+            loader.style.display = 'flex';
+            
+            // Catatan: Banyak website besar memblokir iframe (X-Frame-Options).
+            // Ini normal. Untuk scraping sungguhan, kita pakai fitur Native di bawah.
+            browserFrame.src = url;
+            
+            browserFrame.onload = () => {
+                loader.style.display = 'none';
+                log(`Selesai memuat iframe.`, 'success');
+            };
+            browserFrame.onerror = () => {
+                loader.style.display = 'none';
+                log(`Gagal memuat iframe (Mungkin diblokir X-Frame-Options).`, 'error');
+            };
         }
 
-        function setStatus(status, text) {
-            statusIndicator.className = `status-indicator ${status}`;
-            statusText.textContent = text;
+        function goBack() {
+            log("Fungsi back ditekan.");
+            // Di iframe biasa history back agak sulit dikontrol, ini sekadar UI
         }
 
-        function updateStats() {
-            document.getElementById('pageCount').textContent = state.stats.pages;
-            document.getElementById('jsCount').textContent = state.stats.jsExecuted;
-            document.getElementById('dataCount').textContent = state.stats.dataFetched;
-        }
+        // --- Fitur 2: Native Scraping (Bypass CORS via Capacitor) ---
+        async function scrapeNative() {
+            let url = urlInput.value.trim();
+            if (!url) return log("URL kosong!", "error");
+            if (!url.startsWith('http')) url = 'https://' + url;
 
-        function clearLog() {
-            logOutput.innerHTML = '';
-            addLog('info', '🗑️ Log cleared');
-        }
+            statusEl.textContent = "Status: Scraping...";
+            log(`Mulai Native Fetch: ${url}`);
 
-        // ============================================================
-        // 8. ANDROID BRIDGE (Untuk komunikasi dengan Android)
-        // ============================================================
-        // Interface untuk Android
-        window.AndroidBridge = {
-            onPageLoaded: function(url, title, size) {
-                console.log('Android: Page loaded', url, title, size);
-            },
-            onJSExecuted: function(code, result) {
-                console.log('Android: JS Executed', code, result);
-            },
-            onScraped: function(data) {
-                console.log('Android: Scraped data', data);
-            },
-            onLinksFound: function(links) {
-                console.log('Android: Links found', links);
-            },
-            onScreenshot: function(screenshot) {
-                console.log('Android: Screenshot taken');
-            },
-            onScriptInjected: function(result) {
-                console.log('Android: Script injected', result);
+            try {
+                // Mengecek apakah aplikasi jalan di Android (Capacitor)
+                if (window.Capacitor && window.Capacitor.Plugins.CapacitorHttp) {
+                    log("Menggunakan CapacitorHttp Native API...");
+                    
+                    const response = await Capacitor.Plugins.CapacitorHttp.request({
+                        method: 'GET',
+                        url: url,
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/114.0.0.0 Mobile Safari/537.36'
+                        }
+                    });
+
+                    log(`Status Code: ${response.status}`, 'success');
+                    log(`Data length: ${response.data.length} karakter`);
+                    
+                    // Mencetak sebagian HTML yang didapat
+                    const preview = response.data.substring(0, 100).replace(/</g, '&lt;') + '...';
+                    log(`Preview HTML: ${preview}`);
+
+                } else {
+                    // Fallback jika dibuka di browser PC biasa (akan kena CORS)
+                    log("Capacitor Native tidak terdeteksi. Mencoba fetch biasa (bisa gagal karena CORS)...", "error");
+                    const response = await fetch(url);
+                    const html = await response.text();
+                    log(`Sukses fetch biasa. Panjang HTML: ${html.length} char`, 'success');
+                }
+            } catch (err) {
+                log(`Error Scraping: ${err.message}`, 'error');
+            } finally {
+                statusEl.textContent = "Status: Idle";
             }
-        };
+        }
 
-        // ============================================================
-        // 9. AUTO-INIT
-        // ============================================================
-        document.addEventListener('DOMContentLoaded', () => {
-            addLog('info', '🟢 Browser simulator ready!');
-            addLog('info', '💡 Bisa diakses dari Android WebView');
-            addLog('info', '📱 Gunakan AndroidBridge untuk komunikasi');
-            
-            // Cek apakah di WebView Android
-            if (window.AndroidBridge) {
-                addLog('success', '✅ Terdeteksi Android WebView!');
+        // --- Fitur 3: Cek Cookies ---
+        async function getCookies() {
+            log("Mengecek Cookies...");
+            if (window.Capacitor && window.Capacitor.Plugins.CapacitorCookies) {
+                const url = urlInput.value.trim();
+                const cookies = await Capacitor.Plugins.CapacitorCookies.getCookies({ url: url });
+                log(`Cookies untuk ${url}: ${JSON.stringify(cookies)}`, 'success');
             } else {
-                addLog('info', '🌐 Running di browser biasa');
+                log(`Cookies document (Browser): ${document.cookie || 'Kosong'}`, 'normal');
             }
-        });
+        }
 
-        // Auto-navigate ke example.com
-        setTimeout(() => {
-            document.getElementById('urlInput').value = 'https://example.com';
-            navigateTo();
-        }, 1000);
-
-        // ============================================================
-        // 10. EXPOSE FUNCTIONS KE GLOBAL
-        // ============================================================
-        window.navigateTo = navigateTo;
-        window.executeJS = executeJS;
-        window.scrapePage = scrapePage;
-        window.getAllLinks = getAllLinks;
-        window.screenshotPage = screenshotPage;
-        window.injectScript = injectScript;
-        window.clearLog = clearLog;
-
-        console.log('🚀 Headless Browser Simulator siap!');
-        console.log('📱 Terhubung ke Android WebView?', !!window.AndroidBridge);
+        // Inisialisasi awal
+        window.onload = () => {
+            log("Menunggu Capacitor Bridge...");
+            setTimeout(() => {
+                if (window.Capacitor) log("✅ Berjalan di Android App!", 'success');
+                else log("⚠️ Berjalan di Web Browser biasa.", 'error');
+            }, 1000);
+        };
     </script>
-
 </body>
 </html>

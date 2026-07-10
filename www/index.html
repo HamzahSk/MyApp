@@ -26,7 +26,6 @@
             height: 100vh;
             overflow: hidden;
         }
-        /* --- Address Bar --- */
         .navbar {
             background-color: var(--surface-color);
             padding: 10px;
@@ -59,12 +58,12 @@
             outline: none;
             font-size: 14px;
         }
-        /* --- Viewport (Browser Area) --- */
         .viewport {
             flex-grow: 1;
             position: relative;
             background: #ffffff;
         }
+        /* Iframe sekarang dibuat full width/height tanpa border */
         iframe {
             width: 100%;
             height: 100%;
@@ -80,11 +79,10 @@
             color: var(--primary-color);
             font-weight: bold;
         }
-        /* --- Console/Tools Bottom Sheet --- */
         .tools-panel {
             background-color: var(--surface-color);
             border-top: 1px solid var(--border-color);
-            height: 250px;
+            height: 200px;
             display: flex;
             flex-direction: column;
         }
@@ -95,22 +93,6 @@
             border-bottom: 1px solid var(--border-color);
             font-size: 12px;
             color: #888;
-        }
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            padding: 10px;
-            overflow-x: auto;
-        }
-        .action-buttons button {
-            background: var(--primary-color);
-            color: #000;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 6px;
-            font-weight: bold;
-            white-space: nowrap;
-            cursor: pointer;
         }
         .console-log {
             flex-grow: 1;
@@ -123,35 +105,31 @@
         .log-entry { margin-bottom: 4px; border-bottom: 1px dashed #333; padding-bottom: 2px; }
         .log-success { color: #03dac6; }
         .log-error { color: #cf6679; }
+        .log-warn { color: #ffb86c; }
     </style>
 </head>
 <body>
 
     <div class="navbar">
-        <button onclick="goBack()">◀</button>
+        <button onclick="document.getElementById('browserFrame').contentWindow.history.back()">◀</button>
         <div class="url-input-container">
-            <input type="url" id="urlInput" placeholder="Ketik URL (contoh: https://quotes.toscrape.com)" value="https://quotes.toscrape.com">
+            <input type="url" id="urlInput" placeholder="https://example.com" value="https://example.com">
         </div>
         <button onclick="loadUrl()">GO</button>
     </div>
 
     <div class="viewport">
-        <iframe id="browserFrame" sandbox="allow-same-origin allow-scripts allow-forms"></iframe>
+        <iframe id="browserFrame"></iframe>
         <div class="overlay-loader" id="loader">Memuat Halaman...</div>
     </div>
 
     <div class="tools-panel">
         <div class="tools-header">
-            <span>🛠️ Scraping Tools</span>
-            <span id="status">Status: Idle</span>
-        </div>
-        <div class="action-buttons">
-            <button onclick="scrapeNative()">🌐 Scrape Native (Bypass CORS)</button>
-            <button onclick="getCookies()">🍪 Cek Cookies</button>
-            <button onclick="clearConsole()">🗑️ Clear</button>
+            <span>🛠️ Console Log</span>
+            <button onclick="clearConsole()" style="background:none;border:none;color:white;cursor:pointer;">🗑️ Clear</button>
         </div>
         <div class="console-log" id="consoleLog">
-            <div class="log-entry log-success">Ready: UI Browser dimuat.</div>
+            <div class="log-entry log-success">Ready: Sandbox dilepas. JS & Cookie aktif.</div>
         </div>
     </div>
 
@@ -160,11 +138,15 @@
         const urlInput = document.getElementById('urlInput');
         const loader = document.getElementById('loader');
         const consoleLog = document.getElementById('consoleLog');
-        const statusEl = document.getElementById('status');
 
         function log(msg, type = 'normal') {
             const div = document.createElement('div');
-            div.className = `log-entry ${type === 'success' ? 'log-success' : type === 'error' ? 'log-error' : ''}`;
+            let className = 'log-entry';
+            if (type === 'success') className += ' log-success';
+            if (type === 'error') className += ' log-error';
+            if (type === 'warn') className += ' log-warn';
+            
+            div.className = className;
             div.textContent = `> ${msg}`;
             consoleLog.appendChild(div);
             consoleLog.scrollTop = consoleLog.scrollHeight;
@@ -174,95 +156,30 @@
             consoleLog.innerHTML = '<div class="log-entry">Console dibersihkan.</div>';
         }
 
-        // --- Fitur 1: Visual Browser (Iframe) ---
         function loadUrl() {
             let url = urlInput.value.trim();
+            if (!url) return;
             if (!url.startsWith('http')) url = 'https://' + url;
             
-            log(`Mencoba memuat visual: ${url}`);
+            log(`Membuka: ${url}`);
             loader.style.display = 'flex';
             
-            // Catatan: Banyak website besar memblokir iframe (X-Frame-Options).
-            // Ini normal. Untuk scraping sungguhan, kita pakai fitur Native di bawah.
+            // Memuat URL ke dalam iframe yang sudah bebas sandbox
             browserFrame.src = url;
+        }
+
+        // Event listener saat iframe selesai dimuat
+        browserFrame.onload = () => {
+            loader.style.display = 'none';
+            log(`Halaman selesai dimuat.`, 'success');
             
-            browserFrame.onload = () => {
-                loader.style.display = 'none';
-                log(`Selesai memuat iframe.`, 'success');
-            };
-            browserFrame.onerror = () => {
-                loader.style.display = 'none';
-                log(`Gagal memuat iframe (Mungkin diblokir X-Frame-Options).`, 'error');
-            };
-        }
-
-        function goBack() {
-            log("Fungsi back ditekan.");
-            // Di iframe biasa history back agak sulit dikontrol, ini sekadar UI
-        }
-
-        // --- Fitur 2: Native Scraping (Bypass CORS via Capacitor) ---
-        async function scrapeNative() {
-            let url = urlInput.value.trim();
-            if (!url) return log("URL kosong!", "error");
-            if (!url.startsWith('http')) url = 'https://' + url;
-
-            statusEl.textContent = "Status: Scraping...";
-            log(`Mulai Native Fetch: ${url}`);
-
             try {
-                // Mengecek apakah aplikasi jalan di Android (Capacitor)
-                if (window.Capacitor && window.Capacitor.Plugins.CapacitorHttp) {
-                    log("Menggunakan CapacitorHttp Native API...");
-                    
-                    const response = await Capacitor.Plugins.CapacitorHttp.request({
-                        method: 'GET',
-                        url: url,
-                        headers: {
-                            'User-Agent': 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 Chrome/114.0.0.0 Mobile Safari/537.36'
-                        }
-                    });
-
-                    log(`Status Code: ${response.status}`, 'success');
-                    log(`Data length: ${response.data.length} karakter`);
-                    
-                    // Mencetak sebagian HTML yang didapat
-                    const preview = response.data.substring(0, 100).replace(/</g, '&lt;') + '...';
-                    log(`Preview HTML: ${preview}`);
-
-                } else {
-                    // Fallback jika dibuka di browser PC biasa (akan kena CORS)
-                    log("Capacitor Native tidak terdeteksi. Mencoba fetch biasa (bisa gagal karena CORS)...", "error");
-                    const response = await fetch(url);
-                    const html = await response.text();
-                    log(`Sukses fetch biasa. Panjang HTML: ${html.length} char`, 'success');
-                }
-            } catch (err) {
-                log(`Error Scraping: ${err.message}`, 'error');
-            } finally {
-                statusEl.textContent = "Status: Idle";
+                // Mencoba membaca isi iframe (Akan gagal jika beda domain karena CORS)
+                const frameDoc = browserFrame.contentDocument || browserFrame.contentWindow.document;
+                log(`Judul Halaman: ${frameDoc.title}`, 'success');
+            } catch (e) {
+                log(`INFO Keamanan: Website memblokir akses baca dari luar (CORS/Cross-Origin). Ini normal untuk iframe.`, 'warn');
             }
-        }
-
-        // --- Fitur 3: Cek Cookies ---
-        async function getCookies() {
-            log("Mengecek Cookies...");
-            if (window.Capacitor && window.Capacitor.Plugins.CapacitorCookies) {
-                const url = urlInput.value.trim();
-                const cookies = await Capacitor.Plugins.CapacitorCookies.getCookies({ url: url });
-                log(`Cookies untuk ${url}: ${JSON.stringify(cookies)}`, 'success');
-            } else {
-                log(`Cookies document (Browser): ${document.cookie || 'Kosong'}`, 'normal');
-            }
-        }
-
-        // Inisialisasi awal
-        window.onload = () => {
-            log("Menunggu Capacitor Bridge...");
-            setTimeout(() => {
-                if (window.Capacitor) log("✅ Berjalan di Android App!", 'success');
-                else log("⚠️ Berjalan di Web Browser biasa.", 'error');
-            }, 1000);
         };
     </script>
 </body>
